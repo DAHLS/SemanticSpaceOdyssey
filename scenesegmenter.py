@@ -3,16 +3,22 @@ import subprocess as subp
 from glob import glob
 
 def incrementtime(timeStamp, extraTime=500): 
-    intTime = int(''.join([i for i in timeStamp if i.isdigit()]))
-    intTime += extraTime #extraTime is in hundreds of seconds
-    if int(timeStamp[1]) == 0:
-        zeroZero = "00"
-    else:
-        zeroZero = "0"
-    newStamp = zeroZero + str(intTime)[:2] + str(intTime)[2:4] + \
-               str(intTime)[4:6] + str(intTime)[6:]
-    newStamp = newStamp[:2] + ':' + newStamp[2:4] + ':' + \
-               newStamp[4:6] + '.' + newStamp[6:]
+    timeStamp = ''.join([i for i in timeStamp if i.isdigit()])
+    intTime = int(timeStamp)
+    primeTime = intTime + extraTime #extraTime is in hundreds of seconds
+    zeroZero = "0" * (len(timeStamp) - len(str(intTime))) # Get str of msng 0's
+    newStamp = zeroZero + str(primeTime) 
+    timeParts = [newStamp[:2], newStamp[2:4], newStamp[4:6], newStamp[6:]]
+    for t in range(len(timeParts)):
+        if t == 0:
+            pass
+        elif timeParts[t] == "60":
+            timeParts[t-1] = str(int(timeParts[t-1]) + 1)
+            timeParts[t] = "00"
+        else:
+            pass
+    newStamp = timeParts[0] + ':' + timeParts[1] + ':' + \
+               timeParts[2] + '.' + timeParts[3]
     return newStamp
 
 def cutsegments(timeStamps, videoPath, command, completedSegments):
