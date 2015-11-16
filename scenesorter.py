@@ -1,5 +1,8 @@
+import re
 import string
 import numpy as np
+import subprocess as subp
+from glob import glob
 
 """ FUNCTIONS """
 # Word vectors generation
@@ -66,32 +69,48 @@ def centrality(documentvectors, state="closeness"):
 def cosine(u, v):
     return  np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
 
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower() 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    return sorted(l, key = alphanum_key)
+
 # Sort timestamp and sentence lists by semantic scores.
-def sorter(timecodes, sentences, similarityscores):
-    timesort, sentsort = [], []
+def sorter(timecodes, sentences, segments, similarityscores):
+    timesort, sentsort, segsort = [], [], []
     ordertupl = sorted(similarityscores.items(), key=lambda x: x[1])
     for t in ordertupl:
         timesort.append(timecodes[t[0]])
         sentsort.append(sentences[t[0]])
-    return timesort, sentsort
+        segsort.append(segments[t[0]])
+    return timesort, sentsort, segsort
 
 """ RUNTIME """
 def main():
     # Initial variables
-    srt = open("2001.A.Space.Odyssey.1968.720p.HDDVD.x264-hV.srt").readlines()
+    srt = open("data/2001.A.Space.Odyssey.1968.720p.HDDVD.x264-hV.srt").readlines()
     punct = string.punctuation
-    times = srt[0::4]
+    times = srt[1::4]
     sents = [''.join(char for char in sentstring 
-                        if char not in punct).strip().lower() 
-                    for sentstring in srt[2::4]]
+                     if char not in punct).strip().lower() 
+                     for sentstring in srt[2::4]]
+    videosegments = natural_sort(glob("data/movie_segments/*"))
 
     # Doing all the work; remember to set the state and indexing
     documentvectors = builddocumentvectors(sents, indexing='word2vec')
     simscores = centrality(documentvectors, state='closeness')
-    s_times, s_sents = sorter(times, sents, simscores)
+    s_times, s_sents, s_segs = sorter(times, sents, videosegments, simscores)
 
+    with open("segment_paths.txt", 'w') as f:
+        f.write("\n".join(["file '"+p+"'" for p in s_segs]))
+        f.close()
+        ffmpegcommand = "ffmpeg -auto_convert 1 -f concat -i " + f.name + \
+                        " -c copy output.mp4"
+        ffmpegproc = subp.Popen(ffmpegcommand.split())
+        ffmpegproc.wait()
+
+    """
     # Output data
     for i in range(len(s_sents)):
         print(s_times[i], s_sents[i])
-
+    """
 main()
